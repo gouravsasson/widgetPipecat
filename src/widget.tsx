@@ -16,7 +16,7 @@ class ReactWidget extends HTMLElement {
     const container = document.createElement("div");
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://widget-pipecat-jk5d.vercel.app/style.css"; // Replace with the actual path to your generated CSS file
+    link.href = "https://widget-pipecat-jk5d.vercel.app/react-widget.css"; // Replace with the actual path to your generated CSS file
 
     // Append the stylesheet and container to the Shadow DOM
     this.shadowRoot?.appendChild(link);
