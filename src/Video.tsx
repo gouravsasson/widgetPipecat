@@ -11,11 +11,18 @@ import {
   Send,
   Monitor as MonitorShare,
   X,
-  Maximize2,
-  Settings,
-  Camera,
-  Sparkles,
+  // Maximize2,
+  // Settings,
+  // Camera,
+  // Sparkles,
 } from "lucide-react";
+
+ type TranscriptData = {
+  text: string;
+  final: boolean;
+  timestamp: string;
+  user_id: string;
+};
 
 function Videobot() {
   const client = useRTVIClient();
@@ -23,7 +30,8 @@ function Videobot() {
   const [isConnected, setIsConnected] = useState(false);
   const [llmHelper, setLLMHelper] = useState<LLMHelper | null>(null);
   const [messages, setMessages] = useState<string[]>([]);
-  const [userTranscription, SetuserTranscription] = useState([]);
+  const [userTranscription, SetuserTranscription] = useState<TranscriptData>();
+  console.log(userTranscription);
   const [isMuted, setIsMuted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showPulse, setShowPulse] = useState(true);

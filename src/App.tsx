@@ -2,16 +2,15 @@ import { useEffect, useState } from "react";
 import { RTVIClient } from "@pipecat-ai/client-js";
 import { DailyTransport } from "@pipecat-ai/daily-transport";
 import { RTVIClientAudio, RTVIClientProvider } from "@pipecat-ai/client-react";
-import { LLMHelper } from "@pipecat-ai/client-js";
+// import { LLMHelper } from "@pipecat-ai/client-js";
 import Videobot from "./Video";
 import { useWidgetContext } from "./constexts/WidgetContext";
 import axios from "axios";
 
 function App() {
-  const [client, setClient] = useState<RTVIClient | null>();
-  const { agent_id, schema  } = useWidgetContext();
+  const [client, setClient] = useState<RTVIClient | null>(null); // Default to null
+  const { agent_id, schema } = useWidgetContext();
   const baseurl = `https://app.snowie.ai`;
-  
 
   useEffect(() => {
     const initializeClient = async () => {
@@ -20,18 +19,12 @@ function App() {
           `${baseurl}/api/callsession/create/${agent_id}/`,
           {
             schema_name: schema,
-
-          },
-          {
-            headers: {
-              // Authorization: `Bearer ${token}`,
-            },
           }
         );
-        const sessionId = sessionResponse.data.response;
-          // setSessionId(sessionId); // Save session ID for future use
-        const newClient = new RTVIClient({
 
+        const sessionId = sessionResponse.data.response;
+
+        const newClient = new RTVIClient({
           params: {
             baseUrl: "https://app.snowie.ai/api/daily-bots/voice-openai",
             requestData: {
@@ -44,12 +37,6 @@ function App() {
           enableCam: true,
           enableMic: true,
         });
-        const llmhelper = new LLMHelper({
-          callbacks: {
-
-
-          },
-        }); 
 
         setClient(newClient);
       } catch (error) {
@@ -61,8 +48,8 @@ function App() {
   }, []);
 
   return (
-    <RTVIClientProvider client={client}>
-      <div className=" bg-black h-screen">
+    <RTVIClientProvider client={client!}>
+      <div className="bg-black h-screen">
         <RTVIClientAudio />
         <Videobot />
       </div>
