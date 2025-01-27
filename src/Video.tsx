@@ -179,9 +179,9 @@ function Videobot() {
             barGap={2}
             barWidth={2}
             barMaxHeight={24}
-            className="px-4 py-2.5 rounded-full backdrop-blur-xl border border-white/[0.08]
-              shadow-[0_4px_16px_rgba(0,0,0,0.1)]
-              hover:border-white/[0.15] transition-all duration-300"
+            // className="px-4 py-2.5 rounded-full backdrop-blur-xl border border-white/[0.08]
+            //   shadow-[0_4px_16px_rgba(0,0,0,0.1)]
+            //   hover:border-white/[0.15] transition-all duration-300"
           />
         </div>
 
