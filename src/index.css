@@ -1,1 +1,80 @@
 @import "tailwindcss";
+
+
+:root {
+    --default-font-size: theme(fontSize.sm);
+    --app-padding: 12px;
+    --layout-aside-width: 100%;
+  
+    @screen md {
+      --app-padding: 1rem;
+      --default-font-size: theme(fontSize.base);
+      --layout-aside-width: 320px;
+    }
+    @screen lg {
+      --layout-aside-width: 380px;
+    }
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+  
+  *:focus-visible {
+    outline-color: black;
+    outline-offset: 2px;
+    outline-width: 2px;
+  }
+  
+  html {
+    font-size: var(--default-font-size);
+  }
+  
+  html,
+  body {
+    background: linear-gradient(135deg, #2A1F4C 0%, #4B2A6B 50%, #2A1F4C 100%);
+    color: theme(colors.white);
+    overscroll-behavior: none;
+    min-height: 100vh;
+  }
+  
+  body {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* App layout */
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    position: relative;
+    isolation: isolate;
+  }
+  
+  main::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at center,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 70%
+    );
+    z-index: -1;
+  }
+  
+  main::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/noise.png') repeat;
+    opacity: 0.05;
+    z-index: -1;
+    pointer-events: none;
+  }

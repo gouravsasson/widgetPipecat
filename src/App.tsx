@@ -4,9 +4,14 @@ import { DailyTransport } from "@pipecat-ai/daily-transport";
 import { RTVIClientAudio, RTVIClientProvider } from "@pipecat-ai/client-react";
 import { LLMHelper } from "@pipecat-ai/client-js";
 import Videobot from "./Video";
+import { useWidgetContext } from "./constexts/WidgetContext";
+import axios from "axios";
 
 function App() {
   const [client, setClient] = useState<RTVIClient | null>();
+  const { agent_id, schema  } = useWidgetContext();
+  const baseurl = `https://app.snowie.ai`;
+  
 
   useEffect(() => {
     const initializeClient = async () => {
