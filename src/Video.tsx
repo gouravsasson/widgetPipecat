@@ -64,7 +64,7 @@ function Videobot() {
       },
     });
 
-    client.registerHelper("llm", helper);
+    // client.registerHelper("llm", helper);
     setLLMHelper(helper);
 
     return () => {
