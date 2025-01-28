@@ -317,6 +317,7 @@ function App() {
               email: email,
               phoneNumber: phone,
               agent_code: agent_code,
+              schema_name:schema,
             };
 
             // Call the Cal.com API to book the appointment
@@ -326,7 +327,7 @@ function App() {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "schema-name": "0c133d26-972a-47ea-8050-51a943f2d1d0", // Set the API version header
+                  // "schema-name": "0c133d26-972a-47ea-8050-51a943f2d1d0", // Set the API version header
                 },
                 body: JSON.stringify(contactData),
               }
