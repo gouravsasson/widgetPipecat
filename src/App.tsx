@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { RTVIClient } from "@pipecat-ai/client-js";
 import { DailyTransport } from "@pipecat-ai/daily-transport";
 import { RTVIClientAudio, RTVIClientProvider } from "@pipecat-ai/client-react";
-// import { LLMHelper } from "@pipecat-ai/client-js";
 import Videobot from "./Video";
 import { useWidgetContext } from "./constexts/WidgetContext";
 import axios from "axios";
@@ -21,6 +20,8 @@ function App() {
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const { agent_id, schema } = useWidgetContext();
   const baseurl = `https://app.snowie.ai`;
+  // const agent_id = "2ce284de-a319-4697-8055-f795724439fd"
+  // const schema ="6af30ad4-a50c-4acc-8996-d5f562b6987f"
 
   useEffect(() => {
     const initializeClient = async () => {
@@ -31,9 +32,9 @@ function App() {
             schema_name: schema,
           },
           {
-            headers: {
-              // Authorization: `Bearer ${token}`,
-            },
+            // headers: {
+            //   // Authorization: `Bearer ${token}`,
+            // },
           }
         );
         const sessionId = sessionResponse.data.response;
