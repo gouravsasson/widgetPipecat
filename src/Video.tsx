@@ -16,8 +16,11 @@ import {
   // Camera,
   // Sparkles,
 } from "lucide-react";
+import { useWidgetContext } from "./constexts/WidgetContext";
+import axios from "axios";
+import useSessionStore from "./store/session";
 
- type TranscriptData = {
+type TranscriptData = {
   text: string;
   final: boolean;
   timestamp: string;
@@ -30,11 +33,16 @@ function Videobot() {
   const [isConnected, setIsConnected] = useState(false);
   const [llmHelper, setLLMHelper] = useState<LLMHelper | null>(null);
   const [messages, setMessages] = useState<string[]>([]);
+  const { agent_id, schema } = useWidgetContext();
   const [userTranscription, SetuserTranscription] = useState<TranscriptData>();
   console.log(userTranscription);
   const [isMuted, setIsMuted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showPulse, setShowPulse] = useState(true);
+  const sessionId = useSessionStore((state) => state.sessionId);
+  const setSessionId = useSessionStore((state) => state.setSessionId);
+  const baseURL = `https://app.snowie.ai`;
+  // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
 
   useEffect(() => {
     const pulseTimer = setInterval(() => {
@@ -52,49 +60,6 @@ function Videobot() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!client) return;
-
-    const helper = new LLMHelper({
-      callbacks: {
-        onLLMMessage: (message: LLMContextMessage) => {
-          console.log("Received LLM Message:", message);
-          setMessages((prev) => [...prev, `Bot: ${message.content}`]);
-        },
-      },
-    });
-
-    // client.registerHelper("llm", helper);
-    setLLMHelper(helper);
-
-    return () => {
-      client.unregisterHelper("llm");
-    };
-  }, [client]);
-
-  const sendMessage = async () => {
-    if (!llmHelper || !value) {
-      console.log("Missing LLM Helper or Message Content");
-      return;
-    }
-
-    try {
-      await llmHelper.appendToMessages(
-        {
-          role: "user",
-          content: value,
-        },
-        true
-      );
-      setMessages((prev) => [...prev, `You: ${value}`]);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      alert("Message failed to send.");
-    } finally {
-      setValue("");
-    }
-  };
-
   const handleConnect = async () => {
     if (isConnected || !client) return;
     try {
@@ -109,7 +74,12 @@ function Videobot() {
   const handleDisconnect = async () => {
     if (!isConnected || !client) return;
     try {
-      await client.disconnect();
+      await axios.post(`${baseURL}/api/end_call_session/`, {
+        call_session_id: sessionId,
+        schema_name: schema,
+      });
+      setSessionId(null);
+      await client?.disconnect();
       setIsConnected(false);
     } catch (error) {
       console.error("Disconnection error:", error);
@@ -130,7 +100,8 @@ function Videobot() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      sendTextMessage();
+      setValue("");
     }
   };
 
@@ -142,9 +113,25 @@ function Videobot() {
     console.log("Bot Transcript:", data);
   });
 
+  const sendTextMessage = async () => {
+    const llmHelper = client?.getHelper("llm") as LLMHelper;
+    try {
+      await llmHelper.appendToMessages(
+        {
+          role: "user",
+          content: value,
+        },
+        true // or true, depending on whether you want to run immediately
+      );
+      setValue("");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div
-      className={`group/widget relative flex flex-col w-full max-w-md mx-auto h-[600px] 
+      className={`group/widget relative flex flex-col w-full max-w-md mx-auto h-fit 
       bg-white/[0.02] backdrop-blur-md
       rounded-2xl overflow-hidden
       shadow-[0_8px_32px_rgba(0,0,0,0.2)]
@@ -255,7 +242,7 @@ function Videobot() {
       </div>
 
       {/* Glass Chat Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((msg, index) => {
           const isBot = msg.startsWith("Bot:");
           return (
@@ -278,7 +265,7 @@ function Videobot() {
             </div>
           );
         })}
-      </div>
+      </div> */}
 
       {/* Glass Message Input */}
       <div className="p-4 bg-white/[0.03] backdrop-blur-md border-t border-white/[0.05]">
@@ -295,7 +282,7 @@ function Videobot() {
               transition-all duration-300"
           />
           <button
-            onClick={sendMessage}
+            onClick={sendTextMessage}
             disabled={!isConnected}
             className={`p-3 rounded-xl transition-all duration-300
               hover:scale-110 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]

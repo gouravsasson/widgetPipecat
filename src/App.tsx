@@ -8,6 +8,7 @@ import axios from "axios";
 import { ArrowRightSquareIcon } from "lucide-react";
 import { FunctionCallParams } from "@pipecat-ai/client-js";
 import { LLMHelper } from "@pipecat-ai/client-js";
+import useSessionStore from "./store/session";
 
 interface UserDetails {
   name: string;
@@ -16,12 +17,68 @@ interface UserDetails {
 }
 
 function App() {
-  const [client, setClient] = useState<RTVIClient | null>(null); // Default to null
+  const [client, setClient] = useState<RTVIClient | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+  const [isVoiceAgent, setIsVoiceAgent] = useState(false);
+  const [eventTypeId, setEventTypeId] = useState<number>();
+  const [agentPhone, setAgentPhone] = useState<string>("");
+  const [isAgentDataLoaded, setIsAgentDataLoaded] = useState(false);
+  const [apiKey, setApiKey] = useState<string>("");
   const { agent_id, schema } = useWidgetContext();
+
+  const setSessionId = useSessionStore((state) => state.setSessionId);
   const baseurl = `https://app.snowie.ai`;
-  // const agent_id = "2ce284de-a319-4697-8055-f795724439fd"
-  // const schema ="6af30ad4-a50c-4acc-8996-d5f562b6987f"
+  // const agent_id = "ad7091ac-35d9-4091-b763-526adc1da473";
+  // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
+
+  useEffect(() => {
+    const checkAgentType = async () => {
+      try {
+        const response = await axios.get(
+          `${baseurl}/api/get-agent/${agent_id}/?schema_name=${schema}`,
+          {
+            headers: {
+              // Authorization: `Bearer ${token}`,
+              // "schema-name": schemaName,
+            },
+          }
+        );
+        setIsVoiceAgent(response.data.type === "OpenAIVoice");
+        setEventTypeId(response.data.cal_event_id);
+        setAgentPhone(response.data.agent_phone_number);
+        setApiKey(response.data.cal_api_key);
+        setIsAgentDataLoaded(true);
+        console.log("voice agent", isVoiceAgent);
+        console.log("voice agent", response.data.type === "OpenAIVoice");
+      } catch (error) {
+        console.error("Error checking agent type:", error);
+        setIsVoiceAgent(false);
+        setIsAgentDataLoaded(true);
+      }
+    };
+
+    if (agent_id) {
+      checkAgentType();
+    }
+  }, []);
+
+  async function updateCallSession(sessionId: any, data: any) {
+    try {
+      const response = await axios.patch(
+        `${baseurl}/api/callsession/${sessionId}/`,
+        data,
+        {
+          headers: {
+            // Authorization: `Bearer ${token}`,
+            // "schema-name": schemaName,
+          },
+        }
+      );
+      console.log("Updated Call Session:", response.data);
+    } catch (error) {
+      console.error("Update Call Session Error:", error);
+    }
+  }
 
   useEffect(() => {
     const initializeClient = async () => {
@@ -38,10 +95,10 @@ function App() {
           }
         );
         const sessionId = sessionResponse.data.response;
-        // setSessionId(sessionId); // Save session ID for future use
+        setSessionId(sessionId); // Save session ID for future use
         const newClient = new RTVIClient({
           params: {
-            baseUrl: "https://app.snowie.ai/api/daily-bots/voice-openai",
+            baseUrl: `${baseurl}/api/daily-bots/voice-openai`,
             requestData: {
               agent_code: agent_id,
               schema_name: schema,
@@ -65,17 +122,8 @@ function App() {
           const args = fn.arguments as any;
           console.log("FN args", args);
           console.log("FN", fn);
-          if (fn.functionName === "get_weather_current" && args.location) {
-            console.log("YES");
-            const response = await fetch(
-              `api/weather?location=${encodeURIComponent(args.location)}`
-            );
-            const json = await response.json();
-            console.log("JSON", json);
-            return json;
-          }
-          // Custom logic for collecting user details
-          else if (fn.functionName === "collect_user_details") {
+
+          if (fn.functionName === "collect_user_details") {
             const { name, email, phone } = args;
             console.log("Collected User Details:");
             console.log(`Name: ${name}`);
@@ -83,21 +131,44 @@ function App() {
             console.log(`Phone: ${phone}`);
 
             setUserDetails({ name, email, phone });
-            // Hit CallSession API
-            // Send transcription in Patch to CallSession
-            console.log("USER DETAILS", userDetails); 
 
-            return { success: true };
+            if (!sessionId) {
+              console.error("Session ID not found.");
+              return { success: false, message: "Session ID not found" };
+            }
+
+            // Properly extract first and last name
+            const nameParts = name.trim().split(" ");
+            const firstName = nameParts[0] || "";
+            const lastName =
+              nameParts.length > 1 ? nameParts.slice(1).join(" ") : "N/A";
+
+            try {
+              await updateCallSession(sessionId, {
+                first_name: firstName,
+                last_name: lastName,
+                email,
+                phone_number: phone,
+                agent: agent_id,
+                schema_name: schema,
+              });
+
+              console.log("Call session updated successfully.");
+              return { success: true };
+            } catch (error) {
+              console.error("Error updating call session:", error);
+              return {
+                success: false,
+                message: "Failed to update call session",
+              };
+            }
           } else if (fn.functionName === "notify_agency") {
             const { name, email, phone } = args;
-            console.log("AGENCY NOTIFY INITIATED");
-            //Get the stored user details
+
             if (!name) {
               console.log("USER DETAILS NOT FOUND");
               return { error: "User details not collected yet" };
             }
-
-            console.log("Booking Appointment:", name, email, phone);
 
             // Prepare the SMS message with appointment details
             const message = `
@@ -116,7 +187,7 @@ function App() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  to: "+919667454606", // Not required
+                  to: agentPhone, // Not required
                   from: "+17755879759", // Not required
                   message: message,
                 }),
@@ -128,8 +199,6 @@ function App() {
             return { success: true, smsResponse: smsJson };
           } else if (fn.functionName === "get_first_available_slot") {
             const { appointment_date } = args; // Extract start_date from args
-            console.log("APPT DATE", appointment_date);
-
             let start_time, end_time, start_date;
             start_date = appointment_date;
             // Set the start time as the current time and the end time as one day from today
@@ -147,21 +216,24 @@ function App() {
               end_time = end_time_date.toISOString();
             }
 
-            const event_type_id = 1656400; // Default event type ID
-
             console.log("Fetching first available slot...");
-
+            await llmHelper.appendToMessages(
+              {
+                role: "assistant",
+                content: "Let me check that for you...",
+              },
+              true
+            );
             const slotResponse = await fetch(
               `https://api.cal.com/v2/slots/available?startTime=${encodeURIComponent(
                 start_time
               )}&endTime=${encodeURIComponent(
                 end_time
-              )}&eventTypeId=${event_type_id}`,
+              )}&eventTypeId=${eventTypeId}`,
               {
                 method: "GET",
                 headers: {
-                  Authorization:
-                    "Bearer cal_live_1e693a7ac278da9ddaee2fc02790a14a",
+                  Authorization: `Bearer ${apiKey}`,
                 },
               }
             );
@@ -215,12 +287,12 @@ function App() {
             // Prepare the data to send to the booking API
             const bookingData = {
               start: new Date(appointmentTime).toISOString(), // Convert the appointment time to ISO string
-              eventTypeId: 1656401, // Use the event type ID provided
+              eventTypeId: parseInt(eventTypeId), // Use the event type ID provided
               attendee: {
                 name: name,
                 email: email,
                 phoneNumber: phone,
-                timeZone: "Asia/Kolkata", // Set the time zone
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Set the time zone
                 language: "en",
               },
               metadata: {}, // Optional metadata if any
@@ -233,7 +305,7 @@ function App() {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "cal-api-version": "2024-08-13", // Set the API version header
+                  "cal-api-version": "2024-08-13",
                 },
                 body: JSON.stringify(bookingData),
               }
@@ -242,7 +314,6 @@ function App() {
             const bookingJson = await bookingResponse.json();
             console.log("Booking Response:", bookingJson);
 
-            // If the booking is successful, notify the agency about the new appointment
             if (bookingJson.status === "success") {
               // Prepare the appointment details message
               const appointmentMessage = `
@@ -263,8 +334,8 @@ function App() {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    to: "+91" + phone, // Example agency phone number
-                    from: "+17755879759", // Example sending phone number
+                    to: phone,
+                    from: "+17755879759",
                     message: appointmentMessage,
                   }),
                 }
@@ -286,87 +357,83 @@ function App() {
             }
             return { success: true };
           } else if (fn.functionName === "insert_in_ghl") {
-            console.log("GHL ARGS", ArrowRightSquareIcon);
             const { user_name, user_email, user_phone, appointment_date } =
               args;
-            console.log(
-              "name",
-              "email",
-              "phone",
-              "app",
-              user_name,
-              user_email,
-              user_phone,
-              appointment_date
-            );
-            console.log("BOOK APPOINTMENT INITIATED");
-            const name = user_name;
-            const email = user_email;
-            const phone = user_phone;
-            const appointmentTime = appointment_date;
-            const agent_code = agent_id;
+            console.log("GHL Integration - User Details:", {
+              name: user_name,
+              email: user_email,
+              phone: user_phone,
+              appointment: appointment_date,
+            });
 
-            // Validate user details and appointment time
-            if (!name || !email || !phone || !appointmentTime) {
+            if (!user_name || !user_email || !user_phone || !appointment_date) {
               console.log("Incomplete appointment details");
-              return { error: "Incomplete user details or appointment time" };
+              return {
+                error: "Incomplete user details or appointment time",
+              };
             }
 
-            // Prepare the data to send to the booking API
             const contactData = {
-              name: name,
-              email: email,
-              phoneNumber: phone,
-              agent_code: agent_code,
-              schema_name:schema,
+              schema_name: schema,
+              name: user_name,
+              email: user_email,
+              phone: user_phone,
+              agent_code: agent_id,
             };
 
-            // Call the Cal.com API to book the appointment
-            const contactResponse = await fetch(
-              `${baseurl}/api/create-ghl-contact/`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  // "schema-name": "0c133d26-972a-47ea-8050-51a943f2d1d0", // Set the API version header
-                },
-                body: JSON.stringify(contactData),
+            try {
+              const contactResponse = await axios.post(
+                `${baseurl}/api/create-ghl-contact/`,
+                contactData,
+                {
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
+
+              if (contactResponse.status === 201) {
+                const contact_id = contactResponse.data.contactId;
+
+                const appointmentResponse = await axios.post(
+                  `${baseurl}/api/agent/leadconnect/appointment/`,
+                  {
+                    lead_name: user_name,
+                    contact_id: contact_id,
+                    agent_id: agent_id,
+                    appointment_book_ts: appointment_date,
+                    schema_name: schema,
+                  },
+                  {
+                    headers: { "Content-Type": "application/json" },
+                  }
+                );
+
+                if (appointmentResponse.data.success) {
+                  console.log(
+                    "GHL Integration - Appointment Scheduled Successfully"
+                  );
+
+                  return {
+                    success: true,
+                    message: "Contact created and appointment scheduled in GHL",
+                    contactId: contact_id,
+                  };
+                }
+              } else {
+                console.log("Booking failed:");
+                return { error: "Failed to book the appointment" };
               }
-            );
 
-            const contactJson = await contactResponse.json();
-            console.log("Contact Response:", contactJson);
-
-            // If the booking is successful, notify the agency about the new appointment
-            if (contactJson.status === "success") {
-              const contact_id = contactJson.contactId;
-
-              // Log the appointment details to simulate booking
-              console.log(" contact id", contact_id);
-              const schema_name = schema; // Example appointment ID
-              const agent_code = agent_id; // Example lead ID
-              const url = `${baseurl}/api/agent/leadconnect/appointment/${schema_name}/${agent_code}/`;
-
-              const ghlResponse = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  lead_name: user_name, // Example agency phone number
-                  contact_id: user_phone, // Example sending phone number
-                }),
-              });
-
-              const ghlJson = await ghlResponse.json();
-              console.log("GJHL  Response:", ghlJson);
-
-              // Return a success response with the booking and agency notification details
-              return {
-                success: true,
-              };
-            } else {
-              // If booking fails, return error
-              console.log("Booking failed:");
-              return { error: "Failed to book the appointment" };
+              // console.error(
+              //   "GHL Integration - Failed to create contact or appointment"
+              // );
+              // return {
+              //   success: true,
+              //   message: "Contact created and appointment scheduled in GHL",
+              //   // contactId: contact_id,
+              // };
+            } catch (error) {
+              console.error("GHL Integration Error:", error);
+              return { error: "Failed to integrate with GHL" };
             }
           } else if (fn.functionName === "end_function") {
             console.log("Call Ended");
@@ -383,14 +450,12 @@ function App() {
     };
 
     initializeClient();
-  }, []);
+  }, [isAgentDataLoaded]);
 
   return (
     <RTVIClientProvider client={client!}>
-      <div className="bg-black h-screen">
-        <RTVIClientAudio />
-        <Videobot />
-      </div>
+      <RTVIClientAudio />
+      <Videobot />
     </RTVIClientProvider>
   );
 }
