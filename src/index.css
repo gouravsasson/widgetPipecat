@@ -31,12 +31,7 @@
   }
   
   html,
-  body {
-    background: linear-gradient(135deg, #2A1F4C 0%, #4B2A6B 50%, #2A1F4C 100%);
-    color: theme(colors.white);
-    overscroll-behavior: none;
-    min-height: 100vh;
-  }
+ 
   
   body {
     font-synthesis: none;

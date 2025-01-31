@@ -28,7 +28,7 @@ function App() {
 
   const setSessionId = useSessionStore((state) => state.setSessionId);
   const baseurl = `https://app.snowie.ai`;
-  // const agent_id = "ad7091ac-35d9-4091-b763-526adc1da473";
+  // const agent_id = "0cb4ecb4-e245-42b0-b589-c3491b503f42";
   // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
 
   useEffect(() => {
