@@ -210,7 +210,6 @@ function App() {
             const { appointment_date } = args; // Extract start_date from args
             let start_time, end_time, start_date;
             start_date = appointment_date;
-            // Set the start time as the current time and the end time as one day from today
             if (start_date) {
               const startDateObj = new Date(start_date); // Parse start_date from args
               start_time = startDateObj.toISOString(); // Convert to ISO 8601 format
@@ -218,7 +217,6 @@ function App() {
               endDateObj.setDate(endDateObj.getDate() + 1); // Set end time to one day after start date
               end_time = endDateObj.toISOString(); // Convert end time to ISO format
             } else {
-              // Default to the current time and one day ahead
               start_time = new Date().toISOString();
               const end_time_date = new Date();
               end_time_date.setDate(end_time_date.getDate() + 1);
@@ -226,13 +224,6 @@ function App() {
             }
 
             console.log("Fetching first available slot...");
-            await llmHelper.appendToMessages(
-              {
-                role: "assistant",
-                content: "Let me check that for you...",
-              },
-              true
-            );
             const slotResponse = await fetch(
               `https://api.cal.com/v2/slots/available?startTime=${encodeURIComponent(
                 start_time
@@ -257,12 +248,11 @@ function App() {
               for (const date in slotJson.data.slots) {
                 console.log("date", date);
 
-                // Access the array of slots for the date
                 const slots = slotJson.data.slots[date];
 
                 if (slots && slots.length > 0) {
-                  const firstSlot = slots[0]; // Get the first slot
-                  console.log("SUCCESS", firstSlot.time); // Log the first time
+                  const firstSlot = slots[0];
+                  console.log("SUCCESS", firstSlot.time);
                   return { success: true, slot: firstSlot.time };
                 }
               }
@@ -459,7 +449,7 @@ function App() {
     };
 
     initializeClient();
-  }, [isAgentDataLoaded,refresh]);
+  }, [isAgentDataLoaded, refresh]);
 
   useEffect(() => {
     if (transport !== "ready") {
