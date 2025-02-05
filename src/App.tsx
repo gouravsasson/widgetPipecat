@@ -18,17 +18,26 @@ interface UserDetails {
 
 function App() {
   const [client, setClient] = useState<RTVIClient | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [exitConfirmed, setExitConfirmed] = useState(false);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [isVoiceAgent, setIsVoiceAgent] = useState(false);
   const [eventTypeId, setEventTypeId] = useState<number>();
   const [agentPhone, setAgentPhone] = useState<string>("");
   const [isAgentDataLoaded, setIsAgentDataLoaded] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
+  const {
+    setSessionId,
+    sessionId,
+    transport,
+    setIsConnected,
+    refresh,
+    setRefresh,
+    setTranscription,
+  } = useSessionStore();
   const { agent_id, schema } = useWidgetContext();
-
-  const setSessionId = useSessionStore((state) => state.setSessionId);
   const baseurl = `https://app.snowie.ai`;
-  // const agent_id = "0cb4ecb4-e245-42b0-b589-c3491b503f42";
+  // const agent_id = "c1a1ae07-3c1f-4d78-a91e-925aeeae2ec5";
   // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
 
   useEffect(() => {
@@ -452,10 +461,96 @@ function App() {
     initializeClient();
   }, [isAgentDataLoaded]);
 
+  useEffect(() => {
+    if (transport !== "ready") {
+      return;
+    }
+
+    const handleMouseLeave = (event: MouseEvent) => {
+      if (event.clientY <= 10 && !exitConfirmed) {
+        setShowPopup(true);
+      }
+    };
+
+    const handleBlur = () => {
+      if (!exitConfirmed) {
+        setShowPopup(true);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && !exitConfirmed) {
+        setShowPopup(true);
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!exitConfirmed) {
+        e.preventDefault();
+        // e.returnValue = "";
+        setShowPopup(true);
+      }
+    };
+
+    document.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("mouseleave", handleMouseLeave);
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [exitConfirmed, transport]);
+
+  const handleConfirmExit = async () => {
+    await axios.post(`${baseurl}/api/end_call_session/`, {
+      call_session_id: sessionId,
+      schema_name: schema,
+    });
+    setSessionId(null);
+    await client?.disconnect();
+    setIsConnected(false);
+    setRefresh(!refresh);
+    setTranscription("");
+
+    setShowPopup(false);
+  };
+
+  const handleCancelExit = () => setShowPopup(false);
+
   return (
     <RTVIClientProvider client={client!}>
       <RTVIClientAudio />
       <Videobot />
+      {showPopup && (
+        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50">
+          <div className="max-w-md w-full bg-white/30 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-lg text-center">
+            <h2 className="text-2xl font-semibold text-white mb-4">
+              Active Call Detected
+            </h2>
+            <p className="text-white/90 mb-8">
+              You're switching away from the call. What would you like to do?
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={handleCancelExit}
+                className="flex-1 py-3 px-4 rounded-lg bg-white/30 text-white font-bold hover:bg-white/40 transition"
+              >
+                Keep Talking
+              </button>
+              <button
+                onClick={handleConfirmExit}
+                className="flex-1 py-3 px-4 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition"
+              >
+                End Call
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </RTVIClientProvider>
   );
 }

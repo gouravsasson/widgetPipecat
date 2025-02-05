@@ -1,4 +1,8 @@
-import { useRTVIClient, RTVIClientVideo } from "@pipecat-ai/client-react";
+import {
+  useRTVIClient,
+  RTVIClientVideo,
+  useRTVIClientTransportState,
+} from "@pipecat-ai/client-react";
 import { useState, useEffect } from "react";
 import { LLMHelper, LLMContextMessage } from "@pipecat-ai/client-js";
 import { VoiceVisualizer } from "@pipecat-ai/client-react";
@@ -30,7 +34,6 @@ type TranscriptData = {
 function Videobot() {
   const client = useRTVIClient();
   const [value, setValue] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
   const [llmHelper, setLLMHelper] = useState<LLMHelper | null>(null);
   const [messages, setMessages] = useState<string[]>([]);
   const { agent_id, schema } = useWidgetContext();
@@ -39,10 +42,25 @@ function Videobot() {
   const [isMuted, setIsMuted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showPulse, setShowPulse] = useState(true);
-  const sessionId = useSessionStore((state) => state.sessionId);
-  const setSessionId = useSessionStore((state) => state.setSessionId);
   const baseURL = `https://app.snowie.ai`;
   // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
+  const transportState = useRTVIClientTransportState();
+  const {
+    setSessionId,
+    sessionId,
+    setTransport,
+    setIsConnected,
+    isConnected,
+    transcription,
+    setTranscription,
+    setRefresh,
+    refresh,
+  } = useSessionStore();
+  useEffect(() => {
+    if (transportState) {
+      setTransport(transportState);
+    }
+  }, [transportState]);
 
   useEffect(() => {
     const pulseTimer = setInterval(() => {
@@ -81,6 +99,7 @@ function Videobot() {
       setSessionId(null);
       await client?.disconnect();
       setIsConnected(false);
+      setRefresh(!refresh);
     } catch (error) {
       console.error("Disconnection error:", error);
       alert("Failed to disconnect. Please try again.");
@@ -198,7 +217,7 @@ function Videobot() {
             <span className="absolute -right-1 -top-1 w-3 h-3 bg-emerald-400/90 rounded-full animate-ping" />
           )}
         </button>
-        <button
+        {/* <button
           onClick={() => setIsMuted(!isMuted)}
           disabled={!isConnected}
           className={`p-3.5 rounded-xl transition-all duration-300
@@ -212,7 +231,7 @@ function Videobot() {
             }`}
         >
           {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-        </button>
+        </button> */}
         <button
           onClick={handelScreenShare}
           disabled={!isConnected}
