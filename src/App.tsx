@@ -459,7 +459,7 @@ function App() {
     };
 
     initializeClient();
-  }, [isAgentDataLoaded]);
+  }, [isAgentDataLoaded,refresh]);
 
   useEffect(() => {
     if (transport !== "ready") {
