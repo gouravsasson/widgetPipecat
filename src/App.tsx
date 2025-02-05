@@ -343,7 +343,7 @@ function App() {
               const notifyJson = await notifyResponse.json();
               console.log("Agency Notification Response:", notifyJson);
 
-              // Return a success response with the booking and agency notification details
+              
               return {
                 success: true,
                 appointment: bookingJson,
