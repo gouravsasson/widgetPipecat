@@ -343,7 +343,6 @@ function App() {
               const notifyJson = await notifyResponse.json();
               console.log("Agency Notification Response:", notifyJson);
 
-              
               return {
                 success: true,
                 appointment: bookingJson,

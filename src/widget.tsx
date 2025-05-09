@@ -16,7 +16,7 @@ class ReactWidget extends HTMLElement {
     const container = document.createElement("div");
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://widget-pipecat-jk5d.vercel.app/react-widget.css"; 
+    link.href = "https://widget-pipecat-jk5d.vercel.app/react-widget.css";
 
     // Append the stylesheet and container to the Shadow DOM
     this.shadowRoot?.appendChild(link);
@@ -28,15 +28,15 @@ class ReactWidget extends HTMLElement {
 
     this.root = ReactDOM.createRoot(container);
     this.root.render(
-      <React.StrictMode>
-        <WidgetProvider
-          agent_id={agent_id}
-          schema={schema}
-          access_token={access_token}
-        >
-          <App />
-        </WidgetProvider>
-      </React.StrictMode>
+      // <React.StrictMode>
+      <WidgetProvider
+        agent_id={agent_id}
+        schema={schema}
+        access_token={access_token}
+      >
+        <App />
+      </WidgetProvider>
+      // </React.StrictMode>
     );
   }
 
